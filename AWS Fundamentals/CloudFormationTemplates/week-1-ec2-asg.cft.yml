@@ -1,0 +1,68 @@
+Description: >-
+  AWS CloudFormation script which will create next infrastructure
+  Auto-scaling group (ASG) with two EC2(an Amazon EC2 instance running the Amazon Linux AMI) instances within it
+    (we need to ensure that min amount of instances in the ASG is 2)
+  Allow SSH and HTTP access to EC2 instances
+  Add the ability for EC2 instances to install Java 8 during startup
+
+Parameters:
+  EC2InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+
+  EC2InstanceAmiId:
+    Description: AMI for the EC2 instances
+    Type: String
+    Default: ami-02396cdd13e9a1257
+
+Resources:
+  IC2LaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: IC2Template
+      LaunchTemplateData:
+        ImageId: !Ref EC2InstanceAmiId
+        InstanceType: !Ref EC2InstanceType
+        KeyName: ic2-key-pair
+        SecurityGroups:
+        - !Ref MySecurityGroup
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum update -y
+            yum install -y java-1.8.0
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow inbound traffic from HTTP and SSH
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+
+  IC2ASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      LaunchTemplate:
+        LaunchTemplateId: !Ref IC2LaunchTemplate
+        Version: !GetAtt IC2LaunchTemplate.LatestVersionNumber
+      MinSize: 2
+      MaxSize: 5
+      DesiredCapacity: 2
+      AvailabilityZones:
+      - us-east-1a
+      - us-east-1b
+      MetricsCollection:
+      - Granularity: 1Minute
