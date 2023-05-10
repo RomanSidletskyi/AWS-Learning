@@ -29,7 +29,7 @@ Resources:
       LaunchTemplateData:
         ImageId: !Ref EC2InstanceAmiId
         InstanceType: !Ref EC2InstanceType
-        KeyName: ic2-key-pair
+        KeyName: rsidletskyi-key-pair
         SecurityGroups:
         - !Ref MySecurityGroup
         UserData:
